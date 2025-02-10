@@ -73,14 +73,14 @@ def get_hours_for_70_percent_traffic(hour_counter):
 @app.route('/', methods=['GET', 'POST'])
 def dashboard():
     if request.method == 'POST':
-
+        # Check if a file was uploaded
         if 'file' in request.files:
             file = request.files['file']
             if file.filename != '':
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
                 file.save(file_path)
                 log_data = parse_log_file(file_path)
-
+        # Check if a URL was provided
         elif 'url' in request.form:
             url = request.form['url']
             response = requests.get(url)
@@ -94,59 +94,77 @@ def dashboard():
         else:
             return "No file or URL provided."
 
+        # Generate IP address histogram
         ip_counter = generate_ip_histogram(log_data)
         ip_df = pd.DataFrame(ip_counter.most_common(), columns=['IP Address', 'Occurrences'])
 
+        # Generate hourly traffic histogram
         hour_counter = generate_hourly_traffic_histogram(log_data)
         hour_df = pd.DataFrame(sorted(hour_counter.items()), columns=['Hour', 'Visitors'])
 
+        # Generate IPs contributing to 85% of traffic
         ips_85_percent = get_ips_for_85_percent_traffic(ip_counter)
 
-
+        # Generate hours contributing to 70% of traffic
         hours_70_percent = get_hours_for_70_percent_traffic(hour_counter)
 
-        
+        # Create Plotly charts
+        # Improved IP Address Histogram
         ip_fig = px.bar(
             ip_df,
             x='IP Address',
             y='Occurrences',
-            title='IP Address Histogram',
+            title='<b>IP Address Histogram</b>',
             labels={'Occurrences': 'Number of Occurrences', 'IP Address': 'IP Address'},
-            color='Occurrences',  
-            color_continuous_scale='Viridis',  
-            text='Occurrences'  
+            color='Occurrences',  # Add color gradient
+            color_continuous_scale='Viridis',  # Use a color scale
+            text='Occurrences'  # Display count on bars
         )
-        ip_fig.update_traces(textposition='outside')  
+        ip_fig.update_traces(
+            textposition='outside',  # Move text outside bars
+            marker_line_color='black',  # Add black borders to bars
+            marker_line_width=1.5  # Border width
+        )
         ip_fig.update_layout(
-            xaxis_tickangle=-45,  
+            xaxis_tickangle=-45,  # Rotate x-axis labels for better readability
             xaxis_title='IP Address',
             yaxis_title='Number of Occurrences',
-            showlegend=False
+            showlegend=False,
+            plot_bgcolor='rgba(0,0,0,0)',  # Transparent background
+            paper_bgcolor='rgba(0,0,0,0)',  # Transparent background
+            font=dict(size=12, color='black')  # Font settings
         )
 
-        
+        # Hourly Traffic Histogram
         hour_fig = px.bar(
             hour_df,
             x='Hour',
             y='Visitors',
-            title='Hourly Traffic Histogram',
+            title='<b>Hourly Traffic Histogram</b>',
             labels={'Visitors': 'Number of Visitors', 'Hour': 'Hour of the Day'},
-            color='Visitors',  
-            color_continuous_scale='Plasma',  
-            text='Visitors'  
+            color='Visitors',  # Add color gradient
+            color_continuous_scale='Plasma',  # Use a color scale
+            text='Visitors'  # Display count on bars
         )
-        hour_fig.update_traces(textposition='outside')  
+        hour_fig.update_traces(
+            textposition='outside',  # Move text outside bars
+            marker_line_color='black',  # Add black borders to bars
+            marker_line_width=1.5  # Border width
+        )
         hour_fig.update_layout(
             xaxis_title='Hour of the Day',
             yaxis_title='Number of Visitors',
-            showlegend=False
+            showlegend=False,
+            plot_bgcolor='rgba(0,0,0,0)',  # Transparent background
+            paper_bgcolor='rgba(0,0,0,0)',  # Transparent background
+            font=dict(size=12, color='black')  # Font settings
         )
 
-    
+        # Convert charts to HTML
         ip_graph = ip_fig.to_html(full_html=False)
         hour_graph = hour_fig.to_html(full_html=False)
 
-
+        # Render the dashboard template
         return render_template('dashboard.html', ip_graph=ip_graph, hour_graph=hour_graph,
                               ips_85_percent=ips_85_percent, hours_70_percent=hours_70_percent)
 
