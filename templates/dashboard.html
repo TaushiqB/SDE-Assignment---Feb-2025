@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log Parser Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .chart {
+            margin-bottom: 40px;
+        }
+        .analysis {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Log Parser Dashboard</h1>
+
+    <div class="chart">
+        <h2>IP Address Histogram</h2>
+        {{ ip_graph | safe }}
+    </div>
+
+    <div class="chart">
+        <h2>Hourly Traffic Histogram</h2>
+        {{ hour_graph | safe }}
+    </div>
+
+    <div class="analysis">
+        <h2>Traffic Analysis</h2>
+        <h3>IPs contributing to 85% of traffic:</h3>
+        <ul>
+            {% for ip in ips_85_percent %}
+                <li>{{ ip }}</li>
+            {% endfor %}
+        </ul>
+
+        <h3>Hours contributing to 70% of traffic:</h3>
+        <ul>
+            {% for hour in hours_70_percent %}
+                <li>{{ hour }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>
