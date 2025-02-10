@@ -1,10 +1,17 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request, redirect, url_for
 import plotly.express as px
 import pandas as pd
 from collections import Counter
 import re
+import os
+import requests
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = 'uploads' 
+
+
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
 
 
 def parse_log_file(file_path):
@@ -63,38 +70,57 @@ def get_hours_for_70_percent_traffic(hour_counter):
     return result_hours
 
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def dashboard():
-    file_path = 'apache_combined.log.txt'  
+    if request.method == 'POST':
 
-    
-    log_data = parse_log_file(file_path)
+        if 'file' in request.files:
+            file = request.files['file']
+            if file.filename != '':
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+                file.save(file_path)
+                log_data = parse_log_file(file_path)
 
-    
-    ip_counter = generate_ip_histogram(log_data)
-    ip_df = pd.DataFrame(ip_counter.most_common(), columns=['IP Address', 'Occurrences'])
+        elif 'url' in request.form:
+            url = request.form['url']
+            response = requests.get(url)
+            if response.status_code == 200:
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'log_from_url.txt')
+                with open(file_path, 'w') as f:
+                    f.write(response.text)
+                log_data = parse_log_file(file_path)
+            else:
+                return "Failed to fetch log data from the URL."
+        else:
+            return "No file or URL provided."
 
-    
-    hour_counter = generate_hourly_traffic_histogram(log_data)
-    hour_df = pd.DataFrame(sorted(hour_counter.items()), columns=['Hour', 'Visitors'])
 
-    
-    ips_85_percent = get_ips_for_85_percent_traffic(ip_counter)
+        ip_counter = generate_ip_histogram(log_data)
+        ip_df = pd.DataFrame(ip_counter.most_common(), columns=['IP Address', 'Occurrences'])
 
-    
-    hours_70_percent = get_hours_for_70_percent_traffic(hour_counter)
 
-    
-    ip_fig = px.bar(ip_df, x='IP Address', y='Occurrences', title='IP Address Histogram')
-    hour_fig = px.bar(hour_df, x='Hour', y='Visitors', title='Hourly Traffic Histogram')
+        hour_counter = generate_hourly_traffic_histogram(log_data)
+        hour_df = pd.DataFrame(sorted(hour_counter.items()), columns=['Hour', 'Visitors'])
 
-    
-    ip_graph = ip_fig.to_html(full_html=False)
-    hour_graph = hour_fig.to_html(full_html=False)
 
-    
-    return render_template('dashboard.html', ip_graph=ip_graph, hour_graph=hour_graph,
-                          ips_85_percent=ips_85_percent, hours_70_percent=hours_70_percent)
+        ips_85_percent = get_ips_for_85_percent_traffic(ip_counter)
+
+
+        hours_70_percent = get_hours_for_70_percent_traffic(hour_counter)
+
+
+        ip_fig = px.bar(ip_df, x='IP Address', y='Occurrences', title='IP Address Histogram')
+        hour_fig = px.bar(hour_df, x='Hour', y='Visitors', title='Hourly Traffic Histogram')
+
+
+        ip_graph = ip_fig.to_html(full_html=False)
+        hour_graph = hour_fig.to_html(full_html=False)
+
+
+        return render_template('dashboard.html', ip_graph=ip_graph, hour_graph=hour_graph,
+                              ips_85_percent=ips_85_percent, hours_70_percent=hours_70_percent)
+
+    return render_template('upload.html')
 
 if __name__ == "__main__":
     app.run(debug=True)
