@@ -94,25 +94,55 @@ def dashboard():
         else:
             return "No file or URL provided."
 
-
         ip_counter = generate_ip_histogram(log_data)
         ip_df = pd.DataFrame(ip_counter.most_common(), columns=['IP Address', 'Occurrences'])
 
-
         hour_counter = generate_hourly_traffic_histogram(log_data)
         hour_df = pd.DataFrame(sorted(hour_counter.items()), columns=['Hour', 'Visitors'])
-
 
         ips_85_percent = get_ips_for_85_percent_traffic(ip_counter)
 
 
         hours_70_percent = get_hours_for_70_percent_traffic(hour_counter)
 
+        
+        ip_fig = px.bar(
+            ip_df,
+            x='IP Address',
+            y='Occurrences',
+            title='IP Address Histogram',
+            labels={'Occurrences': 'Number of Occurrences', 'IP Address': 'IP Address'},
+            color='Occurrences',  
+            color_continuous_scale='Viridis',  
+            text='Occurrences'  
+        )
+        ip_fig.update_traces(textposition='outside')  
+        ip_fig.update_layout(
+            xaxis_tickangle=-45,  
+            xaxis_title='IP Address',
+            yaxis_title='Number of Occurrences',
+            showlegend=False
+        )
 
-        ip_fig = px.bar(ip_df, x='IP Address', y='Occurrences', title='IP Address Histogram')
-        hour_fig = px.bar(hour_df, x='Hour', y='Visitors', title='Hourly Traffic Histogram')
+        
+        hour_fig = px.bar(
+            hour_df,
+            x='Hour',
+            y='Visitors',
+            title='Hourly Traffic Histogram',
+            labels={'Visitors': 'Number of Visitors', 'Hour': 'Hour of the Day'},
+            color='Visitors',  
+            color_continuous_scale='Plasma',  
+            text='Visitors'  
+        )
+        hour_fig.update_traces(textposition='outside')  
+        hour_fig.update_layout(
+            xaxis_title='Hour of the Day',
+            yaxis_title='Number of Visitors',
+            showlegend=False
+        )
 
-
+    
         ip_graph = ip_fig.to_html(full_html=False)
         hour_graph = hour_fig.to_html(full_html=False)
 
